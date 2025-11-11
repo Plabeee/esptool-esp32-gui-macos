@@ -1,0 +1,96 @@
+name: Build macOS Executable with PyInstaller
+
+on:
+  push:
+    branches:
+      - main
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build_macos:
+    runs-on: macos-11  # Use a macOS runner for the build
+    # This permission is required for the action to create a GitHub Release
+    permissions:
+      contents: write
+
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x' # Specify your required Python version
+
+      - name: 📦 Install Dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          # Replace requirements.txt with your actual requirements file
+          # pip install -r requirements.txt
+          # Install PyInstaller
+          pip install pyinstaller wxPython pyserial esptool Pillow
+      
+      - name: Find esptool directory
+        id: find_esptool
+        run: |
+          source .venv/bin/activate
+          # Find the directory of the installed esptool package and save it
+          # to a GitHub Actions environment variable
+          ESPTOOL_PATH=$(python -c "import esptool, os; print(os.path.dirname(esptool.__file__))")
+          echo "ESPTOOL_DIR=$ESPTOOL_PATH" >> $GITHUB_ENV
+          echo "Found esptool at: $ESPTOOL_PATH"
+          
+      - name: 🔨 Build with PyInstaller
+        # Adjust the command and options as needed:
+        # --onefile: Creates a single executable file (default is a folder)
+        # --windowed: Creates a .app bundle (for GUI apps)
+        # --name: Sets the name of the executable/app bundle
+        # your_script.py: Replace with the path to your main Python script
+        run: |
+          source .venv/bin/activate
+          pyinstaller --onefile --icon=logo.ico --windowed --add-data="${{ env.ESPTOOL_DIR }}/targets/stub_flasher/*:targets/stub_flasher/" --name "ESP_Flasher" doayee_dfu.py
+      - name: Package .app as a .zip file
+        run: |
+          echo "Compressing ESP_Flasher.app..."
+          # -r = recursive, to include everything in the .app directory
+          zip -r ESP_Flasher.zip ./dist/ESP_Flasher.app
+
+      # 7. Create or Update the "latest" Release
+      # This step uses the GitHub CLI (gh) which is pre-installed.
+      # It tries to create a release. If it fails (because "latest" exists),
+      # it deletes and re-creates it, ensuring the "latest" tag
+      # always points to the newest commit on 'main'.
+      # PyInstaller puts the result in the 'dist' folder
+          # path: dist/
+      - name: Create or Update "latest" Release
+        env:
+          # The GITHUB_TOKEN is automatically provided by Actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Try to create the release. This will tag the current commit as "latest"
+          # If it fails (because "latest" tag/release already exists), it will exit with an error.
+          gh release create latest \
+            --title "Latest Build (main)" \
+            --notes "Automatic build from the main branch." \
+            --latest \
+            --prerelease=false \
+            --draft=false \
+            ./ESP_Flasher.zip \
+          || \
+          ( \
+            echo "Release 'latest' already exists. Re-creating..." && \
+            # Delete the existing release. This also deletes the "latest" tag.
+            gh release delete latest -y && \
+            # Re-create the release, which will tag the current commit as "latest"
+            gh release create latest \
+              --title "Latest Build (main)" \
+              --notes "Automatic build from the main branch." \
+              --latest \
+              --prerelease=false \
+              --draft=false \
+              ./ESP_Flasher.zip \
+          )
+          
