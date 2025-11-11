@@ -48,13 +48,14 @@ jobs:
         # This command is robust because it searches for the content to replace,
         # not a specific line number.
         run: |
-          sed -i 's/DEFAULT_RESET_DELAY = 0.5/DEFAULT_RESET_DELAY = 0.2/' ${{ env.ESPTOOL_DIR }}/reset.py
+          sed -i '' 's/DEFAULT_RESET_DELAY = 0.5/DEFAULT_RESET_DELAY = 0.2/' ${{ env.ESPTOOL_DIR }}/reset.py
 
       - name: Verify patch
         run: |
           echo "--- Verifying reset.py ---"
           grep "DEFAULT_RESET_DELAY = 0.2" ${{ env.ESPTOOL_DIR }}/reset.py || (echo "Patching reset.py failed!" && exit 1)
           echo "--- Patch verified successfully ---"
+          
       - name: 🔨 Build with PyInstaller
         # Adjust the command and options as needed:
         # --onefile: Creates a single executable file (default is a folder)
