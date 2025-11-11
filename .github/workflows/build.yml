@@ -31,7 +31,7 @@ jobs:
           # Replace requirements.txt with your actual requirements file
           # pip install -r requirements.txt
           # Install PyInstaller
-          pip install pyinstaller wxPython pyserial esptool
+          pip install pyinstaller wxPython pyserial esptool Pillow
       
       - name: Find esptool directory
         id: find_esptool
