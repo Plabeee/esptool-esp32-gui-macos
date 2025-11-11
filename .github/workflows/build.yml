@@ -43,12 +43,18 @@ jobs:
           echo "ESPTOOL_DIR=$ESPTOOL_PATH" >> $GITHUB_ENV
           echo "Found esptool at: $ESPTOOL_PATH"
       
+      - name: (Debug) Show reset.py content before patch
+        run: |
+          echo "--- Contents of ${{ env.ESPTOOL_DIR }}/reset.py ---"
+          cat "${{ env.ESPTOOL_DIR }}/reset.py"
+          echo "------------------------------------------------"
+
       - name: Patch esptool/reset.py
         # This patch is still necessary as the default remains 0.5 in the latest version.
-        # This command is robust because it searches for the content to replace,
-        # not a specific line number.
+        # Updated sed command to be whitespace-insensitive (\s*)
+        # Added '' after -i for macOS (BSD) sed compatibility.
         run: |
-          sed -i '' 's/DEFAULT_RESET_DELAY = 0.5/DEFAULT_RESET_DELAY = 0.2/' ${{ env.ESPTOOL_DIR }}/reset.py
+          sed -i '' 's/DEFAULT_RESET_DELAY\s*=\s*0.5/DEFAULT_RESET_DELAY = 0.2/' ${{ env.ESPTOOL_DIR }}/reset.py
 
       - name: Verify patch
         run: |
