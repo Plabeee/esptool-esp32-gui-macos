@@ -25,19 +25,45 @@ jobs:
 
       - name: 📦 Install Dependencies
         run: |
+          python -m venv .venv
+          source .venv/bin/activate
           python -m pip install --upgrade pip
           # Replace requirements.txt with your actual requirements file
           # pip install -r requirements.txt
           # Install PyInstaller
           pip install pyinstaller wxPython pyserial esptool
+      
+      - name: Find esptool directory
+        id: find_esptool
+        run: |
+          source .venv/bin/activate
+          # Find the directory of the installed esptool package and save it
+          # to a GitHub Actions environment variable
+          ESPTOOL_PATH=$(python -c "import esptool, os; print(os.path.dirname(esptool.__file__))")
+          echo "ESPTOOL_DIR=$ESPTOOL_PATH" >> $GITHUB_ENV
+          echo "Found esptool at: $ESPTOOL_PATH"
+      
+      - name: Patch esptool/reset.py
+        # This patch is still necessary as the default remains 0.5 in the latest version.
+        # This command is robust because it searches for the content to replace,
+        # not a specific line number.
+        run: |
+          sed -i 's/DEFAULT_RESET_DELAY = 0.5/DEFAULT_RESET_DELAY = 0.2/' ${{ env.ESPTOOL_DIR }}/reset.py
 
+      - name: Verify patch
+        run: |
+          echo "--- Verifying reset.py ---"
+          grep "DEFAULT_RESET_DELAY = 0.2" ${{ env.ESPTOOL_DIR }}/reset.py || (echo "Patching reset.py failed!" && exit 1)
+          echo "--- Patch verified successfully ---"
       - name: 🔨 Build with PyInstaller
         # Adjust the command and options as needed:
         # --onefile: Creates a single executable file (default is a folder)
         # --windowed: Creates a .app bundle (for GUI apps)
         # --name: Sets the name of the executable/app bundle
         # your_script.py: Replace with the path to your main Python script
-        run: pyinstaller --onefile --icon=logo.ico --windowed --add-data=".venv/Lib/site-packages/esptool/targets/stub_flasher/*;targets/stub_flasher/" --name "ESP_Flasher" doayee_dfu.py
+        run: |
+          source .venv/bin/activate
+          pyinstaller --onefile --icon=logo.ico --windowed --add-data="${{ env.ESPTOOL_DIR }}/targets/stub_flasher/*:targets/stub_flasher/" --name "ESP_Flasher" doayee_dfu.py
       - name: Package .app as a .zip file
         run: |
           echo "Compressing ESP_Flasher.app..."
