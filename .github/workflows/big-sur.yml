@@ -1,4 +1,4 @@
-name: Build macOS Executable with PyInstaller
+name: Build macOS 11 Executable with PyInstaller
 
 on:
   push:
@@ -9,7 +9,10 @@ on:
 
 jobs:
   build_macos:
-    runs-on: macos-11  # Use a macOS runner for the build
+    runs-on: macos-13  # Use a macOS runner for the build
+    env:
+      # CRITICAL: This tells the C compiler and Linker to support macOS 11
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
     # This permission is required for the action to create a GitHub Release
     permissions:
       contents: write
