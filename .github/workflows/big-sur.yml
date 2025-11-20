@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_macos:
-    runs-on: macos-13  # Use a macOS runner for the build
+    runs-on: macos-15-intel  # Use a macOS runner for the build
     env:
       # CRITICAL: This tells the C compiler and Linker to support macOS 11
       MACOSX_DEPLOYMENT_TARGET: "11.0"
@@ -54,7 +54,7 @@ jobs:
         # your_script.py: Replace with the path to your main Python script
         run: |
           source .venv/bin/activate
-          pyinstaller --onefile --icon=logo.icns --windowed --add-data="${{ env.ESPTOOL_DIR }}/targets/stub_flasher/*:targets/stub_flasher/" --name "ESP_Flasher" doayee_dfu.py
+          pyinstaller --onefile --icon=logo.icns --windowed --add-data="${{ env.ESPTOOL_DIR }}/targets/stub_flasher/*:esptool/targets/stub_flasher/" --name "ESP_Flasher" doayee_dfu.py
       - name: Package .app as a .zip file
         run: |
           echo "Compressing ESP_Flasher.app..."
